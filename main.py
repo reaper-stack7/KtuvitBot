@@ -95,7 +95,7 @@ def save_tier_users():
 WHITELISTED_USER_IDS = load_allowed_users()
 logging.info(f"Loaded {len(WHITELISTED_USER_IDS)} allowed users.")
 
-# Tiered users: user_id → daily limit (10 or 50)
+# Tiered users: user_id → daily limit (10 or 20)
 tier_users = load_tier_users()
 logging.info(f"Loaded {len(tier_users)} tiered users.")
 
@@ -200,14 +200,14 @@ def upgrade_tier10(update: Update, context: CallbackContext):
             if user_id in WHITELISTED_USER_IDS:
                 update.message.reply_text("You already have unlimited access!")
                 return
-            current = tier_users.get(user_id, 5)
-            if current >= 50:
-                update.message.reply_text("You're already on the 50/day plan!")
+            current = tier_users.get(user_id, 3)
+            if current >= 20:
+                update.message.reply_text("You're already on the 20/day plan!")
                 return
             if current >= 10:
                 update.message.reply_text(
                     "You're already on the 10/day plan. "
-                    "Share this bot on social media and send /shared <link> to upgrade to 50/day."
+                    "Share this bot on social media and send /shared <link> to upgrade to 20/day."
                 )
                 return
             tier_users[user_id] = 10
@@ -239,9 +239,9 @@ def shared_command(update: Update, context: CallbackContext):
             if user_id in WHITELISTED_USER_IDS:
                 update.message.reply_text("You already have unlimited access!")
                 return
-            current = tier_users.get(user_id, 5)
-            if current >= 50:
-                update.message.reply_text("You're already on the 50/day plan!")
+            current = tier_users.get(user_id, 3)
+            if current >= 20:
+                update.message.reply_text("You're already on the 20/day plan!")
                 return
 
             # Log the share to CSV
@@ -256,11 +256,11 @@ def shared_command(update: Update, context: CallbackContext):
             except Exception as e:
                 logging.error(f"Error saving share: {e}")
 
-            tier_users[user_id] = 50
+            tier_users[user_id] = 20
             save_tier_users()
 
-        logging.info(f"User {user_id} upgraded to tier 50 via share: {url}")
-        update.message.reply_text("Thank you for sharing! You've been upgraded to 50 requests per day.")
+        logging.info(f"User {user_id} upgraded to tier 20 via share: {url}")
+        update.message.reply_text("Thank you for sharing! You've been upgraded to 20 requests per day.")
         record_metric(user_id, 'cmd')
 
 # --- Rate limiting ---
@@ -268,7 +268,7 @@ def shared_command(update: Update, context: CallbackContext):
 def daily_limit_for(user_id):
         if user_id in WHITELISTED_USER_IDS:
             return "unlimited"
-        return tier_users.get(user_id, 5)
+        return tier_users.get(user_id, 3)
 
 # Check if a user can upload a video/audio
 def can_upload_media(user_id):
@@ -279,7 +279,7 @@ def can_upload_media(user_id):
             user_video_count[user_id] = 0
             user_last_reset[user_id] = datetime.now()
 
-        limit = tier_users.get(user_id, 5)
+        limit = tier_users.get(user_id, 3)
         return user_video_count[user_id] < limit
 
 # --- Bot commands ---
@@ -301,7 +301,7 @@ def start(update: Update, context: CallbackContext):
             "Default language is Hebrew. Use /setlanguage <language> to change the subtitle language.\n\n"
             f"Your daily limit: {limit} requests.\n"
             "Send AmYisraelChai to unlock 10/day.\n"
-            "Share this bot on social media and send /shared <link> to unlock 50/day.\n\n"
+            "Share this bot on social media and send /shared <link> to unlock 20/day.\n\n"
             "Use /verbose to also receive subtitles as text.\n"
             "Use /enhance to enable experimental AI transcription improvement."
         )
@@ -461,7 +461,7 @@ def handle_media(update: Update, context: CallbackContext):
         if not can_upload_media(user_id):
             update.message.reply_text(
                 f"You've reached your daily limit of {limit} uploads. Please try again tomorrow.\n"
-                "Send AmYisraelChai to unlock 10/day, or /shared <link> to unlock 50/day."
+                "Send AmYisraelChai to unlock 10/day, or /shared <link> to unlock 20/day."
             )
             return
 
